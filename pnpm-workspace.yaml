@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'packages/interpreters/*'
+  - 'packages/agents/*'

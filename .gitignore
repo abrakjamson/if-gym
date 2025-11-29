@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Experiment results (optional - you may want to commit these)
+experiments/*/results/
+experiments/*/traces/
+
+# Game files (optional - add .z3, .z5, etc. files manually)
+# games/*.z3
+# games/*.z5
+# games/*.z8
+
+# Temporary files
+*.tmp
+.cache/

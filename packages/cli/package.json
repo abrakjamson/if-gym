@@ -1,0 +1,31 @@
+{
+  "name": "@if-gym/cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for running IF agents",
+  "type": "module",
+  "bin": {
+    "if-gym": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "play": "node dist/index.js play",
+    "benchmark": "node dist/index.js benchmark"
+  },
+  "dependencies": {
+    "@if-gym/core": "workspace:*",
+    "@if-gym/interpreters": "workspace:*",
+    "@if-gym/agents": "workspace:*",
+    "@if-gym/evaluators": "workspace:*",
+    "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}
