@@ -24,6 +24,7 @@
     "lint": "pnpm -r lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "pnpm -r clean && rm -rf node_modules",
+    "start": "pnpm --filter @if-gym/cli start",
     "play": "pnpm --filter @if-gym/cli run play",
     "benchmark": "pnpm --filter @if-gym/cli run benchmark"
   },

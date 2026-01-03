@@ -19,7 +19,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@if-gym/core": "workspace:*"
+    "@if-gym/core": "workspace:*",
+    "glkote-term": "^0.4.4",
+    "ifvms": "^1.1.6"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

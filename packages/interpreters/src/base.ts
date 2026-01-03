@@ -1,4 +1,4 @@
-import { IFGame, CommandResult, GameState, GameTurn } from '@if-gym/core';
+import { IFGame, CommandResult, GameState } from '@if-gym/core';
 
 /**
  * Base class for game interpreters

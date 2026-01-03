@@ -12,15 +12,17 @@
     "test": "vitest",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "start": "node dist/index.js",
     "play": "node dist/index.js play",
     "benchmark": "node dist/index.js benchmark"
   },
   "dependencies": {
-    "@if-gym/core": "workspace:*",
-    "@if-gym/interpreters": "workspace:*",
     "@if-gym/agents": "workspace:*",
+    "@if-gym/core": "workspace:*",
     "@if-gym/evaluators": "workspace:*",
-    "commander": "^11.0.0"
+    "@if-gym/interpreters": "workspace:*",
+    "commander": "^11.0.0",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

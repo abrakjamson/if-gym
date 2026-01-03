@@ -28,11 +28,11 @@ export class RandomAgent extends BaseAgent {
     this.name = config.name || 'Random Agent';
   }
 
-  async initialize(initialOutput: string): Promise<void> {
+  async initialize(_initialOutput: string): Promise<void> {
     await this.reset();
   }
 
-  async act(state: GameState): Promise<AgentAction> {
+  async act(_state: GameState): Promise<AgentAction> {
     const command =
       this.commonCommands[Math.floor(Math.random() * this.commonCommands.length)];
 

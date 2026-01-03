@@ -1,6 +1,6 @@
 import { IFGame } from './game.js';
 import { IFAgent } from './agent.js';
-import { GameState, GameTurn, PerformanceMetrics } from './types.js';
+import { GameTurn, PerformanceMetrics } from './types.js';
 
 /**
  * Configuration for a game session

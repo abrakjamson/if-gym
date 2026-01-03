@@ -78,7 +78,7 @@ export abstract class BaseAgent implements IFAgent {
   abstract initialize(initialOutput: string): Promise<void>;
   abstract act(state: GameState): Promise<AgentAction>;
 
-  async observe(command: string, result: string): Promise<void> {
+  async observe(command: string, _result: string): Promise<void> {
     this.turnCount++;
     this.commandHistory.push(command);
   }
