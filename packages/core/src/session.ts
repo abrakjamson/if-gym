@@ -60,6 +60,9 @@ export class GameSession {
     try {
       // Start the game
       const initialOutput = await this.game.start();
+      if (this.config.verbose) {
+        console.log(`\n--- Initial Output ---\n${initialOutput}\n-----------------------\n`);
+      }
       await this.agent.initialize(initialOutput);
 
       let turnNumber = 0;
@@ -95,7 +98,7 @@ export class GameSession {
         await this.agent.observe(action.command, result.output);
 
         if (this.config.verbose) {
-          console.log(`Response: ${result.output.substring(0, 100)}...`);
+          console.log(`Response: ${result.output}\n`);
         }
 
         // Check if game ended

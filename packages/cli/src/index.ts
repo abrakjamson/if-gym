@@ -26,19 +26,14 @@ program
   .option('-m, --model <name>', 'Model name for OpenAI agent', 'gpt-4')
   .option('--turns <number>', 'Maximum turns', '100')
   .option('--verbose', 'Enable verbose logging', false)
+  .option('--log', 'Output full gameplay to console', false)
   .action(async (options) => {
+    let game;
     try {
       const gamePath = path.resolve(options.game);
       
       // Initialize Game
-      // Currently only IFVMS supported (Z-machine)
-      const game = new IFVMSAdapter();
-      // Load game file
-      // Check if file exists
-      // fs is not imported but Adapter handles loading from path string if we implemented it right.
-      // Wait, IFVMSAdapter.load takes path or buffer.
-      // But inside IFVMSAdapter.load I used fs.readFileSync.
-      
+      game = new IFVMSAdapter();
       await game.load(gamePath);
       
       // Initialize Agent
@@ -59,7 +54,7 @@ program
       // Run Session
       const session = new GameSession(game, agent, {
           maxTurns: parseInt(options.turns, 10),
-          verbose: options.verbose
+          verbose: options.verbose || options.log
       });
       
       console.log(`Starting session with agent ${agent.name} on ${path.basename(gamePath)}...`);
@@ -77,6 +72,10 @@ program
     } catch (error: unknown) {
       console.error('Fatal Error:', error instanceof Error ? error.message : String(error));
       process.exit(1);
+    } finally {
+      if (game) {
+        await game.dispose();
+      }
     }
   });
 
