@@ -23,7 +23,7 @@ program
   .description('Run an agent on a game')
   .requiredOption('-g, --game <path>', 'Path to game file')
   .option('-a, --agent <name>', 'Agent to use (random, openai, gpt-4)', 'random')
-  .option('-m, --model <name>', 'Model name for OpenAI agent', 'gpt-4')
+  .option('-m, --model <name>', 'Model name for OpenAI agent', 'gpt-5-nano-2025-08-07')
   .option('--turns <number>', 'Maximum turns', '100')
   .option('--verbose', 'Enable verbose logging', false)
   .option('--log', 'Output full gameplay to console', false)

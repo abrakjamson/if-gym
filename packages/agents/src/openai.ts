@@ -13,7 +13,7 @@ export class OpenAIAgent extends BaseAgent {
     super();
     this.id = config.id || 'openai-agent';
     this.name = config.name || 'OpenAI Agent';
-    this.model = config.model || 'gpt-4';
+    this.model = config.model || 'gpt-5-nano-2025-08-07';
     
     if (!config.apiKey && !process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key is required');
@@ -57,32 +57,37 @@ Example response:
     const historyLimit = 10; // Sliding window
     const recentTurns = state.history.slice(-historyLimit);
     
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: this.systemPrompt }
-    ];
-
     let historyText = "";
     
     for (const turn of recentTurns) {
       historyText += `> ${turn.command}\n${turn.response}\n\n`;
     }
     
-    if (historyText) {
-        messages.push({ role: 'user', content: `Game History:\n${historyText}\n\nCurrent Situation:\n(Based on last response above)\n\nWhat is your next command?` });
-    } else {
-        // First turn
-        messages.push({ role: 'user', content: `Game Start:\n${this.lastOutput}\n\nWhat is your next command?` });
-    }
-
     try {
-      const response = await this.client.chat.completions.create({
+      const response = await this.client.responses.create({
         model: this.model,
-        messages: messages,
-        temperature: 0.2,
-        response_format: { type: 'json_object' }
+        instructions: this.systemPrompt,
+        input: historyText ? `Game History:\n${historyText}\n\nCurrent Situation:\n(Based on last response above)\n\nWhat is your next command?` : `Game Start:\n${this.lastOutput}\n\nWhat is your next command?`,
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'agent_action',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                thoughts: { type: 'string' },
+                command: { type: 'string' },
+                confidence: { type: 'number' }
+              },
+              required: ['thoughts', 'command', 'confidence'],
+              additionalProperties: false
+            }
+          }
+        }
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.output_text;
       if (!content) {
         throw new Error('Empty response from OpenAI');
       }

@@ -19,9 +19,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
     "@if-gym/core": "workspace:*",
-    "openai": "^4.0.0",
-    "@anthropic-ai/sdk": "^0.27.0"
+    "openai": "^6.15.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
