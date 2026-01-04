@@ -66,9 +66,11 @@ export class GameSession {
       await this.agent.initialize(initialOutput);
 
       let turnNumber = 0;
-      const state = this.game.getState();
 
-      while (!state.isEnded && turnNumber < (this.config.maxTurns || 1000)) {
+      while (turnNumber < (this.config.maxTurns || 1000)) {
+        const state = this.game.getState();
+        if (state.isEnded) break;
+        
         turnNumber++;
 
         // Agent decides on action

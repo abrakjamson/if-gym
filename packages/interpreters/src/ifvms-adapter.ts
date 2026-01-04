@@ -149,6 +149,16 @@ export class IFVMSAdapter extends BaseInterpreter {
                         this.outputBuffer += line + '\n';
                     }
                 }
+            } else if (content.lines) {
+                // Grid window (status bar)
+                for (const line of content.lines) {
+                    if (line.content) {
+                        for (const part of line.content) {
+                            if (part.text) this.outputBuffer += part.text;
+                        }
+                        this.outputBuffer += '\n';
+                    }
+                }
             }
         }
     }

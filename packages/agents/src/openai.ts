@@ -7,7 +7,7 @@ export class OpenAIAgent extends BaseAgent {
   private client: OpenAI;
   private model: string;
   private systemPrompt: string;
-  private lastOutput: string = "";
+  private gameStartOutput: string = "";
 
   constructor(config: AgentConfig) {
     super();
@@ -49,25 +49,33 @@ Example response:
 
   async initialize(initialOutput: string): Promise<void> {
     await this.reset();
-    this.lastOutput = initialOutput;
+    this.gameStartOutput = initialOutput;
   }
 
   async act(state: GameState): Promise<AgentAction> {
     // Construct context from history
-    const historyLimit = 10; // Sliding window
-    const recentTurns = state.history.slice(-historyLimit);
+    //const historyLimit = 10; // Sliding window
+    //const recentTurns = state.history.slice(-historyLimit);
+    const recentTurns = state.history
     
     let historyText = "";
     
     for (const turn of recentTurns) {
-      historyText += `> ${turn.command}\n${turn.response}\n\n`;
+      historyText += `${turn.response}\n\n`;
     }
     
     try {
-      const response = await this.client.responses.create({
+      const prompt = `Game Start:
+${this.gameStartOutput}
+
+${historyText ? `Recent History:
+${historyText}` : ''}
+What is your next command?`;
+
+      const response = await (this.client as any).responses.create({
         model: this.model,
         instructions: this.systemPrompt,
-        input: historyText ? `Game History:\n${historyText}\n\nCurrent Situation:\n(Based on last response above)\n\nWhat is your next command?` : `Game Start:\n${this.lastOutput}\n\nWhat is your next command?`,
+        input: prompt,
         text: {
           format: {
             type: 'json_schema',
@@ -113,10 +121,5 @@ Example response:
         }
       };
     }
-  }
-  
-  async observe(command: string, result: string): Promise<void> {
-      await super.observe(command, result);
-      this.lastOutput = result;
   }
 }
