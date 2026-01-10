@@ -15,6 +15,7 @@ export class IFVMSAdapter extends BaseInterpreter {
   private inputResolver: ((output: string) => void) | null = null;
   private isRunning: boolean = false;
   private currentWindowId: number | null = null;
+  private pendingInputType: 'line' | 'char' | null = null;
   private generation: number = 0;
   private keepAliveTimer: NodeJS.Timeout | null = null;
 
@@ -117,12 +118,23 @@ export class IFVMSAdapter extends BaseInterpreter {
         };
 
         if (this.currentWindowId !== null && this.glkOptions?.accept) {
-             this.glkOptions.accept({
-                type: 'line',
-                window: this.currentWindowId,
-                value: command,
-                gen: this.generation
-            });
+             if (this.pendingInputType === 'char') {
+                 // For char input, we send just the first character or a space
+                 const val = command.length > 0 ? command[0] : ' ';
+                 this.glkOptions.accept({
+                    type: 'char',
+                    window: this.currentWindowId,
+                    value: val,
+                    gen: this.generation
+                });
+             } else {
+                 this.glkOptions.accept({
+                    type: 'line',
+                    window: this.currentWindowId,
+                    value: command,
+                    gen: this.generation
+                });
+             }
         }
     });
   }
@@ -167,6 +179,8 @@ export class IFVMSAdapter extends BaseInterpreter {
         const inputReq = data.input.find((i: any) => i.type === 'line' || i.type === 'char');
         if (inputReq) {
             this.currentWindowId = inputReq.id;
+            this.pendingInputType = inputReq.type;
+            
             if (this.inputResolver) {
                 const output = this.outputBuffer.trim();
                 this.outputBuffer = '';
