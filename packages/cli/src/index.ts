@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { GameSession, Logger } from '@if-gym/core';
 import { IFVMSAdapter } from '@if-gym/interpreters';
 import { PromptCacheAgent, RandomAgent, GoalsAgent } from '@if-gym/agents';
-import { OpenAIModel, RandomModel } from '@if-gym/models';
+import { OpenAIModel, RandomModel, ChatModel } from '@if-gym/models';
 import * as path from 'path';
 import 'dotenv/config';
 
@@ -24,8 +24,9 @@ program
   .description('Run an agent on a game')
   .requiredOption('-g, --game <path>', 'Path to game file')
   .option('-a, --agent <type>', 'Agent type (prompt-cache, goals, random)', 'prompt-cache')
-  .option('-m, --model <type>', 'Model type (openai, random)', 'openai')
+  .option('-m, --model <type>', 'Model type (openai, chat, random)', 'openai')
   .option('--model-name <name>', 'Specific model name (e.g. gpt-5.2)', 'gpt-5.2')
+  .option('--base-url <url>', 'Base URL for Chat API (e.g. for LM Studio)')
   .option('--turns <number>', 'Maximum turns', '100')
   .option('--verbose', 'Enable verbose logging', false)
   .option('--log', 'Output full gameplay to console', false)
@@ -51,6 +52,7 @@ program
       logger.log(`- Agent: ${options.agent}`);
       logger.log(`- Model: ${options.model}`);
       logger.log(`- Model Name: ${options.modelName}`);
+      if (options.baseUrl) logger.log(`- Base URL: ${options.baseUrl}`);
       logger.log(`- Max Turns: ${options.turns}`);
       logger.log(`- Log File: ${logFilePath}`);
       logger.log(`- Date: ${new Date().toLocaleString()}`);
@@ -66,6 +68,12 @@ program
       if (modelType === 'openai') {
           model = new OpenAIModel({
               model: options.modelName,
+              apiKey: process.env.OPENAI_API_KEY
+          });
+      } else if (modelType === 'chat') {
+          model = new ChatModel({
+              model: options.modelName,
+              baseUrl: options.baseUrl,
               apiKey: process.env.OPENAI_API_KEY
           });
       } else {
