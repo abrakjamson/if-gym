@@ -1,29 +1,24 @@
-import { BaseAgent, AgentConfig, AgentAction, GameState } from '@if-gym/core';
-import OpenAI from 'openai';
+import { BaseAgent, AgentConfig, AgentAction, GameState, IFModel } from '@if-gym/core';
 
-export class OpenAIAgent extends BaseAgent {
+export interface PromptCacheAgentConfig extends Partial<AgentConfig> {
+  modelInstance: IFModel;
+  systemPrompt?: string;
+}
+
+export class PromptCacheAgent extends BaseAgent {
   readonly id: string;
   readonly name: string;
-  private client: OpenAI;
-  private model: string;
+  private modelInstance: IFModel;
   private systemPrompt: string;
   private gameStartOutput: string = "";
 
-  constructor(config: AgentConfig) {
+  constructor(config: PromptCacheAgentConfig) {
     super();
-    this.id = config.id || 'openai-agent';
-    this.name = config.name || 'OpenAI Agent';
-    this.model = config.model || 'gpt-5.2';
+    this.id = config.id || `prompt-cache-${config.modelInstance.id}`;
+    this.name = config.name || `Prompt Cache Agent (${config.modelInstance.name})`;
+    this.modelInstance = config.modelInstance;
     
-    if (!config.apiKey && !process.env.OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is required');
-    }
-
-    this.client = new OpenAI({
-      apiKey: config.apiKey || process.env.OPENAI_API_KEY,
-    });
-
-    this.systemPrompt = `You are an expert player of interactive fiction (text adventure) games.
+    this.systemPrompt = config.systemPrompt || `You are an expert player of interactive fiction (text adventure) games.
 Your goal is to explore the world, solve puzzles, and complete the game.
 
 # General Tips for Solving Interactive Fiction
@@ -68,7 +63,7 @@ Example response:
   "command": "turn on lamp",
   "confidence": 0.9
 }
-`;
+`
   }
 
   async initialize(initialOutput: string): Promise<void> {
@@ -77,70 +72,28 @@ Example response:
   }
 
   async act(state: GameState): Promise<AgentAction> {
-    // Construct context from history
-    //const historyLimit = 10; // Sliding window
-    //const recentTurns = state.history.slice(-historyLimit);
-    const recentTurns = state.history
+    const recentTurns = state.history;
     
     let historyText = "";
-    
     for (const turn of recentTurns) {
-      historyText += `${turn.response}\n\n`;
+      historyText += `> ${turn.command}\n${turn.response}\n\n`;
     }
     
-    try {
-      const prompt = `Game Start:
+    const prompt = `Game Start:
 ${this.gameStartOutput}
 
 ${historyText ? `Recent History:
 ${historyText}` : ''}
 What is your next command?`;
 
-      const response = await (this.client as any).responses.create({
-        model: this.model,
-        instructions: this.systemPrompt,
-        input: prompt,
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'agent_action',
-            strict: true,
-            schema: {
-              type: 'object',
-              properties: {
-                thoughts: { type: 'string' },
-                command: { type: 'string' },
-                confidence: { type: 'number' }
-              },
-              required: ['thoughts', 'command', 'confidence'],
-              additionalProperties: false
-            }
-          }
-        }
-      });
-
-      const content = response.output_text;
-      if (!content) {
-        throw new Error('Empty response from OpenAI');
-      }
-
-      const parsed = JSON.parse(content);
-      
-      return {
-        command: parsed.command,
-        reasoning: {
-          thoughts: parsed.thoughts,
-          confidence: parsed.confidence,
-        }
-      };
-
+    try {
+      return await this.modelInstance.generateAction(this.systemPrompt, prompt);
     } catch (error) {
-      console.error('Error in OpenAI agent:', error);
-      // Fallback
+      console.error('Error in PromptCacheAgent:', error);
       return {
         command: 'look',
         reasoning: {
-          thoughts: 'Error occurred, falling back to look',
+          thoughts: 'Error occurred in model, falling back to look',
           confidence: 0
         }
       };

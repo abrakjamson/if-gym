@@ -1,6 +1,7 @@
 import { IFGame } from './game.js';
 import { IFAgent } from './agent.js';
 import { GameTurn, PerformanceMetrics } from './types.js';
+import { Logger } from './logger.js';
 
 /**
  * Configuration for a game session
@@ -14,6 +15,8 @@ export interface SessionConfig {
   saveHistory?: boolean;
   /** Verbose logging */
   verbose?: boolean;
+  /** Logger instance */
+  logger?: Logger;
 }
 
 /**
@@ -40,6 +43,7 @@ export class GameSession {
   private agent: IFAgent;
   private config: SessionConfig;
   private history: GameTurn[] = [];
+  private logger: Logger;
 
   constructor(game: IFGame, agent: IFAgent, config: SessionConfig = {}) {
     this.game = game;
@@ -51,6 +55,7 @@ export class GameSession {
       verbose: false,
       ...config,
     };
+    this.logger = this.config.logger || new Logger({ logToConsole: this.config.verbose });
   }
 
   /**
@@ -61,7 +66,7 @@ export class GameSession {
       // Start the game
       const initialOutput = await this.game.start();
       if (this.config.verbose) {
-        console.log(`\n--- Initial Output ---\n${initialOutput}\n-----------------------\n`);
+        this.logger.log(`\n--- Initial Output ---\n${initialOutput}\n-----------------------\n`);
       }
       await this.agent.initialize(initialOutput);
 
@@ -77,9 +82,9 @@ export class GameSession {
         const action = await this.agent.act(state);
 
         if (this.config.verbose) {
-          console.log(`Turn ${turnNumber}: ${action.command}`);
+          this.logger.log(`Turn ${turnNumber}: ${action.command}`);
           if (action.reasoning) {
-            console.log(`Reasoning: ${action.reasoning.thoughts}`);
+            this.logger.log(`Reasoning: ${action.reasoning.thoughts}`);
           }
         }
 
@@ -100,7 +105,7 @@ export class GameSession {
         await this.agent.observe(action.command, result.output);
 
         if (this.config.verbose) {
-          console.log(`Response: ${result.output}\n`);
+          this.logger.log(`Response: ${result.output}\n`);
         }
 
         // Check if game ended

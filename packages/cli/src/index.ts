@@ -5,9 +5,10 @@
  */
 
 import { Command } from 'commander';
-import { GameSession } from '@if-gym/core';
+import { GameSession, Logger } from '@if-gym/core';
 import { IFVMSAdapter } from '@if-gym/interpreters';
-import { RandomAgent, OpenAIAgent } from '@if-gym/agents';
+import { PromptCacheAgent, RandomAgent, GoalsAgent } from '@if-gym/agents';
+import { OpenAIModel, RandomModel } from '@if-gym/models';
 import * as path from 'path';
 import 'dotenv/config';
 
@@ -22,30 +23,66 @@ program
   .command('play')
   .description('Run an agent on a game')
   .requiredOption('-g, --game <path>', 'Path to game file')
-  .option('-a, --agent <name>', 'Agent to use (random, openai, gpt-4)', 'random')
-  .option('-m, --model <name>', 'Model name for OpenAI agent', 'gpt-5-nano-2025-08-07')
+  .option('-a, --agent <type>', 'Agent type (prompt-cache, goals, random)', 'prompt-cache')
+  .option('-m, --model <type>', 'Model type (openai, random)', 'openai')
+  .option('--model-name <name>', 'Specific model name (e.g. gpt-5.2)', 'gpt-5.2')
   .option('--turns <number>', 'Maximum turns', '100')
   .option('--verbose', 'Enable verbose logging', false)
   .option('--log', 'Output full gameplay to console', false)
+  .option('--log-file <path>', 'Path to log file (defaults to ./logs/session-[timestamp].log)')
+  .option('--no-console', 'Disable logging to console')
   .action(async (options) => {
     let game;
+    let logger;
     try {
       const gamePath = path.resolve(options.game);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const logFilePath = options.logFile || path.join(process.cwd(), 'logs', `session-${timestamp}.log`);
+
+      logger = new Logger({
+        logToFile: true,
+        logPath: logFilePath,
+        logToConsole: options.console !== false,
+        verbose: options.verbose || options.log
+      });
+
+      logger.log(`Session Configuration:`);
+      logger.log(`- Game: ${gamePath}`);
+      logger.log(`- Agent: ${options.agent}`);
+      logger.log(`- Model: ${options.model}`);
+      logger.log(`- Model Name: ${options.modelName}`);
+      logger.log(`- Max Turns: ${options.turns}`);
+      logger.log(`- Log File: ${logFilePath}`);
+      logger.log(`- Date: ${new Date().toLocaleString()}`);
+      logger.log(`----------------------------------------\n`);
       
       // Initialize Game
       game = new IFVMSAdapter();
       await game.load(gamePath);
       
+      // Initialize Model
+      let model;
+      const modelType = options.model.toLowerCase();
+      if (modelType === 'openai') {
+          model = new OpenAIModel({
+              model: options.modelName,
+              apiKey: process.env.OPENAI_API_KEY
+          });
+      } else {
+          model = new RandomModel();
+      }
+
       // Initialize Agent
       let agent;
       const agentType = options.agent.toLowerCase();
       
-      if (agentType.includes('openai') || agentType.includes('gpt')) {
-          agent = new OpenAIAgent({
-              id: 'openai',
-              name: 'OpenAI Agent',
-              model: options.model,
-              apiKey: process.env.OPENAI_API_KEY
+      if (agentType === 'goals') {
+          agent = new GoalsAgent({
+              modelInstance: model
+          });
+      } else if (agentType === 'prompt-cache') {
+          agent = new PromptCacheAgent({
+              modelInstance: model
           });
       } else {
           agent = new RandomAgent();
@@ -54,27 +91,40 @@ program
       // Run Session
       const session = new GameSession(game, agent, {
           maxTurns: parseInt(options.turns, 10),
-          verbose: options.verbose || options.log
+          verbose: options.verbose || options.log,
+          logger: logger
       });
       
-      console.log(`Starting session with agent ${agent.name} on ${path.basename(gamePath)}...`);
+      logger.log(`Starting session with agent ${agent.name} on ${path.basename(gamePath)}...`);
       const result = await session.run();
       
-      console.log(`\nSession finished.`);
-      console.log(`Turns: ${result.turns}`);
-      console.log(`Metrics:`);
-      console.table(result.metrics);
+      logger.log(`\nSession finished.`);
+      logger.log(`Turns: ${result.turns}`);
+      logger.log(`Metrics:`);
+      
+      // Format metrics for logging
+      if (options.console !== false) {
+        console.table(result.metrics);
+      }
+      logger.log(JSON.stringify(result.metrics, null, 2));
       
       if (result.error) {
-          console.error(`Error: ${result.error}`);
+          logger.error(`Error: ${result.error}`);
           process.exit(1);
       }
     } catch (error: unknown) {
-      console.error('Fatal Error:', error instanceof Error ? error.message : String(error));
+      if (logger) {
+        logger.error(`Fatal Error: ${error instanceof Error ? error.message : String(error)}`);
+      } else {
+        console.error('Fatal Error:', error instanceof Error ? error.message : String(error));
+      }
       process.exit(1);
     } finally {
       if (game) {
         await game.dispose();
+      }
+      if (logger) {
+        logger.close();
       }
     }
   });

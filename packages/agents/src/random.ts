@@ -1,31 +1,20 @@
-import { BaseAgent, AgentAction, GameState, AgentConfig } from '@if-gym/core';
+import { BaseAgent, AgentConfig, AgentAction, GameState } from '@if-gym/core';
+import { RandomModel } from '@if-gym/models';
 
 /**
  * Simple random agent for testing
- * Tries random common IF commands
+ * Tries random common IF commands via RandomModel
  */
 export class RandomAgent extends BaseAgent {
   readonly id: string;
   readonly name: string;
-
-  private commonCommands = [
-    'look',
-    'inventory',
-    'north',
-    'south',
-    'east',
-    'west',
-    'up',
-    'down',
-    'take lamp',
-    'open door',
-    'examine room',
-  ];
+  private model: RandomModel;
 
   constructor(config: Partial<AgentConfig> = {}) {
     super();
     this.id = config.id || 'random-agent';
     this.name = config.name || 'Random Agent';
+    this.model = new RandomModel();
   }
 
   async initialize(_initialOutput: string): Promise<void> {
@@ -33,15 +22,6 @@ export class RandomAgent extends BaseAgent {
   }
 
   async act(_state: GameState): Promise<AgentAction> {
-    const command =
-      this.commonCommands[Math.floor(Math.random() * this.commonCommands.length)];
-
-    return {
-      command,
-      reasoning: {
-        thoughts: 'Randomly selected command',
-        confidence: 0.1,
-      },
-    };
+    return this.model.generateAction('', '');
   }
 }

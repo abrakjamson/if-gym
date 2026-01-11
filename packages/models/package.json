@@ -1,7 +1,7 @@
 {
-  "name": "@if-gym/agents",
+  "name": "@if-gym/models",
   "version": "0.1.0",
-  "description": "LLM agent implementations for playing IF games",
+  "description": "Model providers for IF agents",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,9 +19,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.27.0",
     "@if-gym/core": "workspace:*",
-    "@if-gym/models": "workspace:*",
     "diff": "^8.0.2",
     "openai": "^6.15.0"
   },

@@ -21,6 +21,7 @@
     "@if-gym/core": "workspace:*",
     "@if-gym/evaluators": "workspace:*",
     "@if-gym/interpreters": "workspace:*",
+    "@if-gym/models": "workspace:*",
     "commander": "^11.0.0",
     "dotenv": "^17.2.3"
   },

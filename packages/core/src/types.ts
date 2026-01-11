@@ -64,6 +64,8 @@ export interface AgentAction {
   command: string;
   /** Optional reasoning trace */
   reasoning?: AgentReasoning;
+  /** Optional metadata resulting from the action (e.g. updated goal files) */
+  metadata?: Record<string, unknown>;
 }
 
 /**
