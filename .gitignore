@@ -47,3 +47,9 @@ experiments/*/traces/
 # Temporary files
 *.tmp
 .cache/
+
+# Testing logs
+packages/cli/goals-*
+
+# Games
+packages/cli/games/*
