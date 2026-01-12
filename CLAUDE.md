@@ -14,25 +14,20 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 - **`packages/core/`**: Core abstractions (Agent, Game, Model, Session, Logger)
 - **`packages/interpreters/`**: Adapters for game engines (IFVMSAdapter for Z-machine)
-- **`packages/models/`**: LLM provider adapters (OpenAIModel with Responses API support)
-- **`packages/agents/`**: Agent strategies (PromptCacheAgent, GoalsAgent)
-- **`packages/evaluators/`**: Metrics and analysis tools
-- **`packages/cli/`**: CLI for running games (`pnpm play`)
+- **`packages/models/`**: LLM provider adapters:
+  - `OpenAIModel`: For the modern `Responses` API (supports native `apply_patch`).
+  - `ChatModel`: For standard `chat/completions` API (Ollama, LM Studio, etc.).
+- **`packages/agents/`**: Agent strategies:
+  - `PromptCacheAgent`: Full-history context.
+  - `GoalsAgent`: Persistent markdown-based memory (`goals.md`).
+- **`packages/cli/`**: CLI for running games (`pnpm play`).
 
-### Layered Execution Model
+### Layered Execution & Interoperability
 
-We separate the **Agent** (strategy) from the **Model** (provider):
-1. **Agent**: Decides what to send to the model and how to process the results (e.g., maintaining a `goals.md` file).
-2. **Model**: Handles the raw API communication (e.g., OpenAI Responses API, tool-calling loops).
-
-### Package Dependencies
-
-```
-@if-gym/cli → depends on → all packages
-@if-gym/agents → depends on → @if-gym/core, @if-gym/models
-@if-gym/models → depends on → @if-gym/core
-@if-gym/interpreters → depends on → @if-gym/core
-```
+Both `openai` and `chat` models implement a **multi-turn tool loop**:
+1. If the model emits a tool call (like a patch), the model layer executes it via a callback and re-invokes the model with the result.
+2. This continues until the model returns a final text command.
+3. The `ChatModel` automatically maps specialized tools like `apply_patch` to standard functions if not natively supported.
 
 ## Development Commands
 
@@ -41,40 +36,29 @@ We separate the **Agent** (strategy) from the **Model** (provider):
 ```bash
 pnpm install   # Install all dependencies
 pnpm build     # Build all packages
-pnpm play --game games/zork1.z3 --agent goals --model openai --log  # Run a session
+pnpm play --game games/zork1.z3 --agent goals --model chat --base-url http://localhost:1234/v1 --log
 ```
 
 ## Implementation Strategy
 
 ### Agent Patterns
 
-1. **PromptCacheAgent**: Sends `Game Start` + `Recent History` (full command/response pairs) to the model every turn. Optimized for prompt caching.
-2. **GoalsAgent**: Maintains a persistent `goals.md` document (Tasks, Inventory, Clues). Uses OpenAI's native `apply_patch` tool to update memory instead of sending full history.
+1. **GoalsAgent**: 
+   - Mandatory tool-calling workflow: Memory Patch -> Game Command.
+   - Resilient patching: Uses a custom line-based patcher to handle imprecise model diffs.
+   - Persistence: Writes `logs/goals-live.md` for real-time monitoring.
 
 ### Model Implementation
 
-- **OpenAIModel**: Uses the `Responses` API. Implements an internal tool-calling loop using `previous_response_id` to handle multi-turn interactions (like patching memory before issuing a game command).
-- Models should return a standard `AgentAction` with reasoning and a text command.
-
-### Interpreter Implementation
-
-- **IFVMSAdapter**: Wraps `ifvms.js` and `glkote-term`.
-- Supports both `line` (standard input) and `char` (one-key) input modes.
-- Captures status bar (grid) and buffer window content.
+- **JSON Extraction**: Both models use an aggressive `extractJson` helper to find JSON buried in conversational text or markdown blocks.
+- **Strict Schema**: `json_schema` is enforced for the final game command response.
 
 ## Code Style & Standards
 
 - **Strict mode**: All packages use `"strict": true`.
-- **Imports**: Use `.js` extensions in imports for ESM compatibility (e.g., `import { Foo } from './foo.js'`).
-- **Tools**: Prefer native model tools (like `apply_patch`) for agent memory management.
-
-## Debugging in VS Code
-
-- Use the **"Play: OpenAI Agent"** launch configuration.
-- It automatically runs the `pnpm:build` task before launching.
-- Source maps are enabled; set breakpoints directly in `.ts` files in `packages/agents` or `packages/models`.
-- Environment variables are loaded from `packages/cli/.env`.
+- **Imports**: Use `.js` extensions in imports for ESM compatibility.
+- **Dependencies**: New models go in `packages/models`, new strategies in `packages/agents`.
 
 ---
 
-**Remember**: The goal is to study how AI agents reason and plan. The `goals.md` pattern is preferred for complex games to manage context window efficiency.
+**Remember**: The architecture is built for interoperability. Agents should define tools in a model-agnostic way, and model providers are responsible for normalizing the handshake.

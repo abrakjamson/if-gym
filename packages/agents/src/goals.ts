@@ -1,7 +1,10 @@
 import { BaseAgent, AgentConfig, AgentAction, GameState, IFModel } from '@if-gym/core';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface GoalsAgentConfig extends Partial<AgentConfig> {
   modelInstance: IFModel;
+  persistToFile?: boolean;
 }
 
 export class GoalsAgent extends BaseAgent {
@@ -10,13 +13,18 @@ export class GoalsAgent extends BaseAgent {
   private modelInstance: IFModel;
   private goalsMarkdown: string;
   private gameStartOutput: string = "";
+  private persistToFile: boolean;
+  private goalsFilePath: string;
 
   constructor(config: GoalsAgentConfig) {
     super();
     this.id = config.id || `goals-${config.modelInstance.id}`;
     this.name = config.name || `Goals Agent (${config.modelInstance.name})`;
     this.modelInstance = config.modelInstance;
+    this.persistToFile = config.persistToFile !== false;
     
+    this.goalsFilePath = path.join(process.cwd(), 'logs', 'goals-live.md');
+
     this.goalsMarkdown = `# Tasks
 - Explore the surroundings
 
@@ -26,11 +34,25 @@ export class GoalsAgent extends BaseAgent {
 # Clues
 - None
 `;
+    this.saveGoalsToFile();
   }
 
   async initialize(initialOutput: string): Promise<void> {
     await this.reset();
     this.gameStartOutput = initialOutput;
+  }
+
+  private saveGoalsToFile() {
+      if (!this.persistToFile) return;
+      try {
+          const dir = path.dirname(this.goalsFilePath);
+          if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+          }
+          fs.writeFileSync(this.goalsFilePath, this.goalsMarkdown);
+      } catch (e) {
+          console.error('GoalsAgent: Failed to write goals-live.md:', e);
+      }
   }
 
   private applyPatchResiliently(current: string, diffText: string): string {
@@ -106,26 +128,14 @@ ${this.goalsMarkdown}
 Current Situation:
 ${lastTurn ? lastTurn.response : "The game has just started."} 
 
-Task:
-1. Review the current situation and your goals.md.
-2. If needed, update goals.md using the apply_patch tool.
-3. Provide your next game command as a JSON object in your final response: {"thoughts": "...", "command": "...", "confidence": 0.9}`;
+MANDATORY WORKFLOW:
+1. You MUST use the "apply_patch" tool to update goals.md with your current plan, inventory, and clues. 
+2. If you don't have updates, you still MUST use apply_patch to confirm you are keeping the current goals.
+3. Only after the tool call is finished, provide your next game command as a JSON object.`;
 
     const instructions = `You are an expert player of interactive fiction games.
-You maintain a "goals.md" document to track tasks, inventory, and clues.
-
-# goals.md Structure:
-1. # Tasks
-2. # Inventory with notes
-3. # Clues
-
-# Your Workflow:
-1. Use the "apply_patch" tool to update goals.md. Use valid unified diff format.
-2. ALWAYS provide your next game command in JSON format: {"thoughts": "...", "command": "...", "confidence": 0.9}
-
-When using apply_patch:
-- Use "goals.md" for the path.
-- In the "diff" parameter, include hunk range information (@@ -1,10 +1,10 @@).`;
+You maintain a
+`;
 
     const tools = [{ type: 'apply_patch' }];
 
@@ -139,6 +149,7 @@ When using apply_patch:
                     } else if (op.content) {
                         this.goalsMarkdown = op.content;
                     }
+                    this.saveGoalsToFile();
                     return {
                         type: 'apply_patch_call_output',
                         call_id: toolCall.call_id,

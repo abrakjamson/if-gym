@@ -27,6 +27,23 @@ export class OpenAIModel implements IFModel {
     this.client = new OpenAI({ apiKey });
   }
 
+  private extractJson(text: string): any {
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Try to find JSON block
+      const match = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/{[\s\S]*}/);
+      if (match) {
+        try {
+          return JSON.parse(match[1] || match[0]);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+
   async generateAction(
     instructions: string, 
     input: string, 
@@ -104,11 +121,11 @@ export class OpenAIModel implements IFModel {
       let thoughts = '';
       
       if (response.output_text) {
-          try {
-              const parsed = JSON.parse(response.output_text);
+          const parsed = this.extractJson(response.output_text);
+          if (parsed) {
               command = parsed.command || '';
               thoughts = parsed.thoughts || '';
-          } catch {
+          } else {
               command = response.output_text.trim();
           }
       }
@@ -116,12 +133,10 @@ export class OpenAIModel implements IFModel {
       // If we still have tool calls in the final response (e.g. function calls)
       const functionCall = response.output?.find((item: any) => item.type === 'function_call');
       if (functionCall && functionCall.arguments) {
-          try {
-            const args = JSON.parse(functionCall.arguments);
-            command = args.command || command;
-            thoughts = args.thoughts || thoughts;
-          } catch (e) {
-            console.warn('OpenAIModel: Failed to parse tool arguments:', e);
+          const parsed = this.extractJson(functionCall.arguments);
+          if (parsed) {
+            command = parsed.command || command;
+            thoughts = parsed.thoughts || thoughts;
           }
       }
 

@@ -9,10 +9,13 @@ IF Gym is an experimental framework for training and evaluating AI agents on int
 - ✅ **Z-Machine Support**: Robust `ifvms.js` adapter for playing classic games (Zork, Lost Pig, etc.).
 - ✅ **Advanced Agents**: 
   - `prompt-cache`: Full-history context for standard play.
-  - `goals`: Long-term memory agent that maintains a `goals.md` document using OpenAI's native `apply_patch` tool.
-- ✅ **Modern API Support**: Integration with OpenAI's `Responses` API (including `gpt-5.2`).
+  - `goals`: Long-term memory agent that maintains a `goals.md` document using persistent state.
+- ✅ **Interoperable Model Providers**:
+  - `openai`: Integration with OpenAI's cutting-edge `Responses` API (including `gpt-5.2`).
+  - `chat`: Support for standard Chat Completions API, compatible with local hosts like **LM Studio**, **Ollama**, and **vLLM**.
+- ✅ **Tool-Calling Loops**: Automatic multi-turn handshake for memory updates (using native `apply_patch` on OpenAI or mapped functions on local models).
+- ✅ **Live Memory Visualization**: Watch the agent's thoughts evolve in real-time via `logs/goals-live.md`.
 - ✅ **Comprehensive Logging**: Automated session logging to files with metadata, reasoning traces, and metrics.
-- ✅ **Clean Architecture**: Separated Agent (strategy) and Model (provider) layers.
 
 ## Quick Start
 
@@ -33,8 +36,8 @@ OPENAI_API_KEY=your_key_here
 # Play Zork with the Goals agent and OpenAI gpt-5.2
 pnpm play --game games/zork1.z3 --agent goals --model openai --log
 
-# Play with a random baseline agent
-pnpm play --game games/zdungeon.z5 --agent random
+# Play Lost Pig with a local model via LM Studio
+pnpm play --game games/lostpig.z8 --agent goals --model chat --base-url http://localhost:1234/v1 --model-name your-model-here --log
 ```
 
 ## CLI Parameters
@@ -43,8 +46,9 @@ pnpm play --game games/zdungeon.z5 --agent random
 |-----------|-------------|---------|
 | `-g, --game <path>` | Path to the `.z3`, `.z5`, etc. file | (Required) |
 | `-a, --agent <type>` | `prompt-cache`, `goals`, or `random` | `prompt-cache` |
-| `-m, --model <type>` | `openai` or `random` | `openai` |
-| `--model-name <name>`| Specific LLM (e.g., `gpt-5.2`, `gpt-4o`) | `gpt-5.2` |
+| `-m, --model <type>` | `openai` (Responses API), `chat` (standard API), or `random` | `openai` |
+| `--model-name <name>`| Specific LLM identifier | `gpt-5.2` |
+| `--base-url <url>` | Custom API endpoint (for local hosts like LM Studio) | (Optional) |
 | `--turns <number>` | Maximum turns per session | `100` |
 | `--log` | Enable full gameplay output to console | `false` |
 | `--log-file <path>` | Custom path for session log file | `./logs/session-*.log` |
@@ -53,10 +57,11 @@ pnpm play --game games/zdungeon.z5 --agent random
 ## Agent Strategies
 
 ### Goals Agent (`--agent goals`)
-The Goals Agent is designed for complex games where the context window might get crowded. Instead of sending the full history every turn, it:
-1. Maintains a `goals.md` file with `# Tasks`, `# Inventory`, and `# Clues`.
-2. Uses the OpenAI `apply_patch` tool to perform incremental updates to its memory.
-3. Only passes the current situation and the updated memory to the model, drastically reducing token usage and focusing the agent's attention.
+The Goals Agent manages a persistent `goals.md` document to handle complex games efficiently:
+1. **Memory**: Tracks `# Tasks`, `# Inventory`, and `# Clues`.
+2. **Persistence**: Updates a live file at `logs/goals-live.md` every turn.
+3. **Handshake**: Performs an internal tool-calling loop to patch its memory *before* issuing the game command.
+4. **Interoperability**: Uses OpenAI's native `apply_patch` tool on the `openai` provider, and automatically maps it to a standard `function` call on the `chat` provider.
 
 ## Architecture
 
@@ -66,21 +71,11 @@ if-gym/
 │   ├── core/          # Interfaces (IFGame, IFModel, IFAgent), Logger
 │   ├── interpreters/  # IFVMSAdapter (Z-machine)
 │   ├── agents/        # PromptCacheAgent, GoalsAgent, RandomAgent
-│   ├── models/        # OpenAIModel (Responses API), RandomModel
+│   ├── models/        # OpenAIModel (Responses), ChatModel (Standard), RandomModel
 │   └── cli/           # CLI implementation
 ├── games/             # Place your game files here
-└── logs/              # Session logs are saved here
+└── logs/              # Session logs and live memory files
 ```
-
-## Development
-
-### Debugging
-VS Code launch configurations are provided. Press **F5** to start the "Play: OpenAI Agent" task, which builds the project and attaches the debugger to the CLI. Breakpoints in TypeScript source files will work as expected.
-
-## Related Work
-
-- **[Jericho](https://github.com/microsoft/jericho)** - Reinforcement learning for IF (Python)
-- **[ifvms.js](https://github.com/curiousdannii/ifvms.js)** - The TypeScript interpreter used by this framework.
 
 ## License
 
